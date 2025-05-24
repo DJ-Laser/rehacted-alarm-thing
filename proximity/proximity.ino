@@ -1,7 +1,11 @@
+#include <Wire.h>
+
 const int trigPin = 9;
 const int echoPin = 10;
 
 const int buzzerPin = 12;
+
+const int i2cAddress = 55;
 
 void setup()
 {
@@ -10,6 +14,7 @@ void setup()
   pinMode(echoPin, INPUT);
 
   Serial.begin(9600);
+  Wire.begin(i2cAddress);
 }
 
 float getSensorDistance()
@@ -47,17 +52,24 @@ void buzzerOff()
   digitalWrite(buzzerPin, LOW);
 }
 
+bool alarmTripped = false;
+
 void loop()
 {
-  float distance = getSensorDistance();
-
-  if (distance < 25)
+  if (!alarmTripped)
   {
-    beepBuzzer(100, 1000);
+
+    buzzerOff();
+    float distance = getSensorDistance();
+
+    if (distance < 25)
+    {
+      alarmTripped = true;
+    }
   }
   else
   {
-    buzzerOff();
+    beepBuzzer(100, 200);
   }
 
   delay(100);
