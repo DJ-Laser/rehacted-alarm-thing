@@ -28,7 +28,7 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 String password = "";
 
 void setup() {
-  Serial.begin(9600);   // Initialize Serial communication for debugging RFID UIDs
+  Serial.begin(9600); 
   SPI.begin();
   rfid.PCD_Init();
   lcd.init();
@@ -40,8 +40,8 @@ void setup() {
 
 void loop() {
   if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
-    // Define authorized UID (replace with your actual UID)
-    byte authorizedUID[4] = {0x21, 0x38, 0xC0, 0x01};
+    
+    byte authorizedUID[4] = {0x21, 0x38, 0xC0, 0x01}; // UID for blue key
     
     bool authorized = true;
 
@@ -72,12 +72,11 @@ void loop() {
     rfid.PICC_HaltA();
     rfid.PCD_StopCrypto1();
 
-    password = "";  // reset password input
+    password = ""; 
 
-    return;  // Skip keypad reading this loop
+    return; 
   }
 
-  // Keypad code below stays unchanged
   char key = keypad.getKey();
 
   if (key) {
