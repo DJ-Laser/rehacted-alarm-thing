@@ -24,10 +24,8 @@ byte colPins[COLS] = {5, 4, 3, 2};
 Keypad keypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-String password = "";
-bool awaitingPassword = false;
-
 byte authorizedUID[4] = {0x21, 0x38, 0xC0, 0x01};
+String correctPasscode = "1236";
 
 int alarmUnoAddress = 3;
 
@@ -54,15 +52,37 @@ void setup()
   lcd.clear();
 }
 
-void loop()
+void alarmOkLoop()
 {
-  bool alarmOk = isAlarmOk();
-  Serial.print("Alarm: ");
-  Serial.println(alarmOk);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Alarm Ok");
 
-  if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial())
+  while (isAlarmOk())
   {
-    bool authorized = true;
+    Serial.println("Alarm Ok");
+    delay(300);
+  }
+
+  Serial.println("Alarm Tripped!");
+}
+
+void waitForRfid()
+{
+  bool authorized = false;
+
+  while (!authorized)
+  {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Tap RFID Keycard");
+
+    while (!(rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()))
+    {
+      delay(500);
+    }
+
+    authorized = true;
 
     if (rfid.uid.size != 4)
       authorized = false;
@@ -82,28 +102,35 @@ void loop()
     if (authorized)
     {
       lcd.setCursor(0, 0);
-      lcd.print("Valid");
-      delay(2000);
-      lcd.clear();
-      lcd.print("Enter Password:");
-      lcd.setCursor(0, 1);
-      awaitingPassword = true;
-      password = "";
+      lcd.print("Authorized");
     }
     else
     {
       lcd.setCursor(0, 0);
-      lcd.print("Invalid");
-      delay(2000);
-      lcd.clear();
-      awaitingPassword = false;
+      lcd.print("Unauthorized");
     }
 
+    delay(2000);
     rfid.PICC_HaltA();
     rfid.PCD_StopCrypto1();
   }
+}
 
-  if (awaitingPassword)
+void printPasswordDialog(String password)
+{
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Enter Passcode:");
+  lcd.setCursor(0, 1);
+  lcd.print(password);
+}
+
+String checkPassword()
+{
+  String password = "";
+  printPasswordDialog(password);
+
+  while (true)
   {
     char key = keypad.getKey();
 
@@ -112,21 +139,26 @@ void loop()
       if (key == '#')
       {
         lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("Password:");
-        lcd.setCursor(0, 1);
-        lcd.print(password);
-        delay(3000);
-        lcd.clear();
-        awaitingPassword = false;
-        password = "";
+        if (password == correctPasscode)
+        {
+          lcd.setCursor(0, 0);
+          lcd.print("Correct");
+          delay(2000);
+          break;
+        }
+        else
+        {
+          lcd.setCursor(0, 0);
+          lcd.print("Incorrect");
+          delay(2000);
+          password = "";
+          printPasswordDialog(password);
+        }
       }
       else if (key == '*')
       {
         password = "";
-        lcd.setCursor(0, 1);
-        lcd.print("                ");
-        lcd.setCursor(0, 1);
+        printPasswordDialog(password);
       }
       else
       {
@@ -138,4 +170,25 @@ void loop()
       }
     }
   }
+}
+
+void loop()
+{
+  if (isAlarmOk())
+  {
+    alarmOkLoop();
+  }
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Alarm Tripped!");
+  delay(3000);
+
+  waitForRfid();
+  checkPassword();
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Disabling Alarm");
+  delay(3000);
 }

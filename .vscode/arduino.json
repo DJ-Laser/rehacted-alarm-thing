@@ -2,5 +2,5 @@
     "port": "/dev/ttyACM1",
     "board": "arduino:avr:uno",
     "programmer": "avrisp",
-    "sketch": "proximity/proximity.ino"
+    "sketch": "Input/Input.ino"
 }

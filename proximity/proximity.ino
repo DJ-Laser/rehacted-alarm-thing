@@ -95,7 +95,6 @@ float getSensorDistance()
 
   long duration = pulseIn(echoPin, HIGH);
   float distance = (duration * .0343) / 2;
-  Serial.println(distance);
 
   return distance;
 }
@@ -131,12 +130,15 @@ void loop()
     buzzerOff();
 
     float distance = getSensorDistance();
+    Serial.print("Alarm Ok: ");
+    Serial.println(distance);
 
     if (loopsTripped > debounceLoops)
     {
+      Serial.println("Alarm Tripped!");
       alarmTripped = true;
     }
-    else if (distance > 25)
+    else if (distance < 25)
     {
       loopsTripped += 1;
     }
