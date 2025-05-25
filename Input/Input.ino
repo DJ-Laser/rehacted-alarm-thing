@@ -42,9 +42,18 @@ bool isAlarmOk()
   return alarmOk == 1;
 }
 
+void disableAlarm()
+{
+  Wire.beginTransmission(alarmUnoAddress);
+  Wire.write(1); // Request alarm disable
+  Wire.endTransmission();
+}
+
 void setup()
 {
   Serial.begin(9600);
+  Serial1.begin();
+
   SPI.begin();
   rfid.PCD_Init();
   lcd.init();
@@ -187,6 +196,7 @@ void loop()
   waitForRfid();
   checkPassword();
 
+  disableAlarm();
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("Disabling Alarm");

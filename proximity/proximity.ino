@@ -30,26 +30,7 @@ void setup()
   Serial.println("Started Alarm System");
 }
 
-I2cDataMode currentI2cMode = I2C_MODE_ALARM_STATUS;
 int lastI2cRequestReturn = false;
-
-I2cDataMode getI2cMode(int firstByte)
-{
-  switch (firstByte)
-  {
-  case 0:
-    return I2C_MODE_ALARM_STATUS;
-
-  case 1:
-    return I2C_MODE_CHECK_PASSCODE;
-
-  case 2:
-    return I2C_MODE_CHECK_RFID;
-
-  default:
-    return I2C_MODE_INVALID_MODE;
-  }
-}
 
 // Recieve data to verify and prepare data to return
 void receiveEvent(int bytes)
@@ -62,17 +43,19 @@ void receiveEvent(int bytes)
   int modeByte = Wire.read();
   bytes -= 1;
 
-  currentI2cMode = getI2cMode(modeByte);
-
   lastI2cRequestReturn = 0;
 
-  switch (currentI2cMode)
+  switch (modeByte)
   {
-  case I2C_MODE_ALARM_STATUS:
+  case 0: // Alarm status check
     if (!alarmTripped)
     {
       lastI2cRequestReturn = 1;
     }
+    break;
+
+  case 1: // Disable alarm
+    alarmTripped = false;
     break;
 
   default:
@@ -121,7 +104,7 @@ void buzzerOff()
 }
 
 int loopsTripped = 0;
-int debounceLoops = 5;
+int debounceLoops = 1000;
 
 void loop()
 {
@@ -137,6 +120,7 @@ void loop()
     {
       Serial.println("Alarm Tripped!");
       alarmTripped = true;
+      loopsTripped = 0;
     }
     else if (distance < 25)
     {
