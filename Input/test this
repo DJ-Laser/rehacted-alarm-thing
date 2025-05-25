@@ -28,6 +28,9 @@ Keypad keypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 LiquidCrystal_I2C lcd(0x27, 16, 2);  
 
 String password = "";
+bool awaitingPassword = false; 
+
+byte authorizedUID[4] = {0x21, 0x38, 0xC0, 0x01};
 
 void setup() {
   Serial.begin(9600); 
@@ -35,14 +38,11 @@ void setup() {
   rfid.PCD_Init();
   lcd.init();
   lcd.backlight();
-  lcd.setCursor(0, 0);
-  lcd.print("Enter Password:");
-  lcd.setCursor(0, 1);
+  lcd.clear(); 
 }
 
 void loop() {
   if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
-    byte authorizedUID[4] = {0x21, 0x38, 0xC0, 0x01};
     bool authorized = true;
 
     if (rfid.uid.size != 4) authorized = false;
@@ -57,50 +57,52 @@ void loop() {
 
     lcd.clear();
     if (authorized) {
-      lcd.print("passed");
+      lcd.setCursor(0, 0);
+      lcd.print("Valid");
       delay(2000);
       lcd.clear();
-      lcd.setCursor(0, 0);
       lcd.print("Enter Password:");
       lcd.setCursor(0, 1);
+      awaitingPassword = true;
+      password = "";
     } else {
-      lcd.print("invalid");
+      lcd.setCursor(0, 0);
+      lcd.print("Invalid");
       delay(2000);
       lcd.clear();
-      return;  
+      awaitingPassword = false;
     }
 
     rfid.PICC_HaltA();
     rfid.PCD_StopCrypto1();
-    password = ""; 
   }
 
-  // Step 3: Keypad input only if UID was valid
-  char key = keypad.getKey();
+  if (awaitingPassword) {
+    char key = keypad.getKey();
 
-  if (key) {
-    if (key == '#') {
-      lcd.clear();
-      lcd.print("Password:");
-      lcd.setCursor(0, 1);
-      lcd.print(password);
-      delay(3000);
-      lcd.clear();
-      password = "";
-      lcd.setCursor(0, 0);
-      lcd.print("Enter Password:");
-      lcd.setCursor(0, 1);
-    } 
-    else if (key == '*') {
-      password = "";
-      lcd.setCursor(0, 1);
-      lcd.print("                "); 
-      lcd.setCursor(0, 1);
-    } 
-    else {
-      if (password.length() < 16) {
-        password += key;
-        lcd.print(key); 
+    if (key) {
+      if (key == '#') {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Password:");
+        lcd.setCursor(0, 1);
+        lcd.print(password);
+        delay(3000); 
+        lcd.clear();
+        awaitingPassword = false; 
+        password = "";
+      } 
+      else if (key == '*') {
+        password = "";
+        lcd.setCursor(0, 1);
+        lcd.print("                "); 
+        lcd.setCursor(0, 1);
+      } 
+      else {
+        if (password.length() < 16) {
+          password += key;
+          lcd.print(key); 
+        }
       }
     }
   }
