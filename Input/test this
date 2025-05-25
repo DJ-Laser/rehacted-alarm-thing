@@ -1,5 +1,3 @@
-//SHOULD SCAN PROPER UID FIRST THEN ALLOW FOR KEYPAD INPUT
-
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <Keypad.h>
@@ -31,6 +29,19 @@ String password = "";
 bool awaitingPassword = false; 
 
 byte authorizedUID[4] = {0x21, 0x38, 0xC0, 0x01};
+
+int alarmUnoAddress = 55;
+
+bool isAlarmOk() {
+  Wire.beginTransmission(alarmUnoAddress);
+  Wire.write(0); // Set alarm check mode
+  Wire.endTransmission();
+
+  Wire.requestFrom(alarmUnoAddress, 1);
+  int alarmOk = Wire.read();
+
+  return alarmOk == 1;
+}
 
 void setup() {
   Serial.begin(9600); 
