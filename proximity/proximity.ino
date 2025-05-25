@@ -12,7 +12,7 @@ const int trigPin = 9;
 const int echoPin = 10;
 const int buzzerPin = 12;
 
-const int i2cAddress = 55;
+const int i2cAddress = 3;
 const String passcode = "1234";
 
 bool alarmTripped = false;
@@ -20,17 +20,18 @@ bool alarmTripped = false;
 void setup()
 {
   pinMode(buzzerPin, OUTPUT);
-  pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
 
-  Serial.begin(9600);
   Wire.begin(i2cAddress);
   Wire.onReceive(receiveEvent);
   Wire.onRequest(requestEvent);
+
+  Serial.begin(9600);
+  Serial.println("Started Alarm System");
 }
 
 I2cDataMode currentI2cMode = I2C_MODE_ALARM_STATUS;
-bool lastI2cRequestStatus = false;
+int lastI2cRequestReturn = false;
 
 I2cDataMode getI2cMode(int firstByte)
 {
@@ -63,9 +64,15 @@ void receiveEvent(int bytes)
 
   currentI2cMode = getI2cMode(modeByte);
 
+  lastI2cRequestReturn = 0;
+
   switch (currentI2cMode)
   {
   case I2C_MODE_ALARM_STATUS:
+    if (!alarmTripped)
+    {
+      lastI2cRequestReturn = 1;
+    }
     break;
 
   default:
@@ -75,22 +82,7 @@ void receiveEvent(int bytes)
 
 void requestEvent()
 {
-  switch (currentI2cMode)
-  {
-  case I2C_MODE_ALARM_STATUS:
-    if (alarmTripped)
-    {
-      Wire.write(0);
-    }
-    else
-    {
-      Wire.write(1);
-    }
-    break;
-
-  default:
-    break;
-  }
+  Wire.write(lastI2cRequestReturn);
 }
 
 float getSensorDistance()
@@ -103,6 +95,7 @@ float getSensorDistance()
 
   long duration = pulseIn(echoPin, HIGH);
   float distance = (duration * .0343) / 2;
+  Serial.println(distance);
 
   return distance;
 }
@@ -128,17 +121,28 @@ void buzzerOff()
   digitalWrite(buzzerPin, LOW);
 }
 
+int loopsTripped = 0;
+int debounceLoops = 5;
+
 void loop()
 {
   if (!alarmTripped)
   {
-
     buzzerOff();
+
     float distance = getSensorDistance();
 
-    if (distance < 25)
+    if (loopsTripped > debounceLoops)
     {
       alarmTripped = true;
+    }
+    else if (distance > 25)
+    {
+      loopsTripped += 1;
+    }
+    else
+    {
+      loopsTripped = 0;
     }
   }
   else
